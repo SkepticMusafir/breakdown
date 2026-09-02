@@ -1,0 +1,14 @@
+# Secrets
+files/.crunchdao/token
+
+# Data (too large for GitHub / fetch separately via CrunchDAO API)
+files/data/
+files/prediction/
+files/resources/*.joblib
+
+# Claude Code local/machine-specific state
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Jupyter
+.ipynb_checkpoints/
