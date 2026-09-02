@@ -23,10 +23,26 @@ captured, so further hand-crafted variants are deprioritized until either Tier 3
 pushed harder (richer features, different model) or Tier 4 is tried.
 
 Still explicitly **out of scope** for now:
-- Tier 2's non-cumulative members not yet tried (ADWIN, BOCPD, the two-state
-  regime-switching model) — deprioritized; unlikely to add more than the ~0.02 ceiling
-  every Tier 1/2 method so far has topped out at.
+- BOCPD, the two-state regime-switching model — deprioritized; unlikely to add more
+  than the ~0.02 ceiling every Tier 1/2 method so far has topped out at.
 - Tier 4 (foundation-model embeddings)
+
+**Update 2026-09-02, part 2: ADWIN is back in scope, but as a Tier 3 *feature*, not a
+standalone Tier 2 scorer** — reversing its earlier deprioritization above. Using
+`river` (the online-ML library)'s drift detectors as feature generators for the
+learned classifier, same role wavelets played in row 9. `river.drift.ADWIN` (fed
+`z_raw`) and `river.drift.PageHinkley` (fed raw `x`, a structurally different
+EWMA-forgetting variant of the existing Tier-2 `page_hinkley`) are implemented as
+"Stage A" — see row 10 once a real TS-AUC is recorded, and the new
+`_RiverDetectorBank` class in `baseline_with_viz.ipynb`. `river.drift.KSWIN` was
+benchmarked and dropped from this stage: ~570-3050 microseconds/point regardless of
+window size (it runs `scipy`'s `ks_2samp` every point once its window fills, unlike
+ADWIN's `clock`-gated check), projecting to 50-250+ minutes added to `train()` for one
+detector — against a track record where every feature family added so far has bought
++0.001 to +0.005 TS-AUC. The binary `DDM`/`EDDM`/`HDDMA`/`HDDMW` family is deferred to
+a later stage, pending a validated binarization proxy (these detectors need a 0/1
+"error" stream, which this dataset has no natural equivalent of). See the new
+`files/detector_verification.ipynb` for the synthetic battery behind these decisions.
 
 ## 2. Current implementation, exactly as it stands
 
@@ -69,10 +85,24 @@ change one, change both, or they will silently drift apart.
    identical TS-AUC — if it doesn't, something non-deterministic crept in (unlikely
    here, since neither scorer uses randomness, but worth stating explicitly).
 
-Environment: exact package versions have not been pinned yet. Before the next
-experiment, run `pip freeze > requirements.txt` in the working environment and commit
-it — right now, reproducibility of *results* is tracked here, but reproducibility of
-the *environment* is not, and that gap should close before Tier 2 starts.
+Environment: pinned as of 2026-09-02 in `requirements.txt` (repo root) — a dedicated
+`.venv` (Python 3.12; 3.11+ required), created specifically because the conda
+environment previously used (`penv`) turned out to be a shared, multi-project
+environment, not specific to this repo. Its `numpy` had been installed twice — once
+via `conda`, once via a later untracked `pip install` that silently overwrote the
+conda copy's files on disk — leaving a binary ABI mismatch against the conda-built
+`scipy` (`ValueError: numpy.dtype size changed...`) that broke `scipy`, `scikit-learn`,
+and (transitively, via `river.drift`'s internal `sklearn` import) `river` as well.
+Fixing that in place then surfaced a second, unrelated conflict: `joblib` needed
+reinstalling, which immediately clashed with `sktime`'s `joblib<1.6` pin — a different
+library sharing that same environment for other work. Rather than keep patching a
+shared environment, `requirements.txt` pins a clean, disposable, project-only `.venv`.
+It lists only this project's direct dependencies (not a raw `pip freeze`, which would
+have baked in Windows-only transitive packages pulled in by `crunch-cli`'s CLI
+dependencies and broken installation on macOS/Linux) — verified by reinstalling from
+it into a fresh venv from scratch. Setup: `python -m venv .venv && pip install -r
+requirements.txt`, then register it as a Jupyter kernel (see `requirements.txt`'s
+header comment) and select it before running `baseline_with_viz.ipynb`.
 
 ## 4. Experiment log
 
@@ -198,7 +228,9 @@ forward, not mutually exclusive:**
 
 ## 6. Reproducibility checklist (carried from the context file, made concrete here)
 
-- [ ] `requirements.txt` pinned (see §3)
+- [x] `requirements.txt` pinned (see §3) — done 2026-09-02, via a dedicated `.venv`
+      after the shared `penv` conda environment was found to have a `numpy`/`scipy`
+      ABI conflict plus a cross-project `joblib`/`sktime` version clash
 - [ ] Row 1 of the experiment log filled in before drawing further comparisons
 - [ ] `ks_test_scores()` and `infer()`'s `ks_test` branch verified identical after any
       future edit to either (see §2)

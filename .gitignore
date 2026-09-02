@@ -12,3 +12,6 @@ files/resources/*.joblib
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Python virtual environment (recreate via `python -m venv .venv` + `pip install -r requirements.txt`)
+.venv/

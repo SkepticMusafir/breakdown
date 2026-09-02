@@ -1,0 +1,25 @@
+# Environment for the CrunchDAO "structural-break-real-time" submission
+# (see files/EXPERIMENTS.md and files/baseline_with_viz.ipynb).
+#
+# Setup (Python 3.11+ required -- river's own minimum; 3.12 verified):
+#   python -m venv .venv
+#   .venv\Scripts\activate            (Windows)
+#   source .venv/bin/activate         (macOS/Linux)
+#   pip install -r requirements.txt
+#   python -m ipykernel install --user --name breakdown --display-name "breakdown (structural-break)"
+# Then select the "breakdown" kernel for baseline_with_viz.ipynb in Jupyter/VS Code.
+#
+# Only direct, imported dependencies are pinned (to exact versions, for result
+# reproducibility per EXPERIMENTS.md) -- pip resolves transitive dependencies
+# per-platform, so this installs cleanly on Windows/macOS/Linux alike.
+
+numpy==2.5.2
+scipy==1.18.1
+scikit-learn==1.9.0
+pandas==3.0.5
+joblib==1.6.0
+PyWavelets==1.9.0
+river==0.26.1
+crunch-cli==12.0.1
+matplotlib==3.11.1
+ipykernel==7.3.0
