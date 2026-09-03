@@ -44,6 +44,50 @@ a later stage, pending a validated binarization proxy (these detectors need a 0/
 "error" stream, which this dataset has no natural equivalent of). See the new
 `files/detector_verification.ipynb` for the synthetic battery behind these decisions.
 
+**Update 2026-09-03: Tier 4 is no longer "foundation-model embeddings only" —
+a from-scratch LSTM architecture has been coded up as a new, standalone notebook,
+`files/deep_learning_archi.ipynb`.** Per the user's request, this is a genuinely
+different paradigm from every prior tier: instead of a fixed menu of hand-engineered
+features (summary statistics, wavelet/spectral decomposition, river drift detectors)
+combined by either a hand-tuned formula or a tree ensemble, a bidirectional LSTM
+encodes each series' historical (no-break) segment into a context, and a causal
+(unidirectional) LSTM — augmented with step-wise attention over the historical
+encoding, not just a single pooled summary — processes the online segment one point
+at a time, exactly matching the real streaming contract. **This notebook has been
+authored and mechanically verified, but deliberately NOT trained on the real
+competition data yet** (per explicit instruction — code it up first, run it
+separately later): the channel-encoding vectorized/streaming equivalence and the
+model's batched-training-vs-streaming-inference equivalence are both verified
+numerically on synthetic data (matching the discipline every prior tier's
+verification followed), and a full `train()`/`infer()` smoke test runs cleanly
+end-to-end on a small synthetic dataset while respecting a simulated version of the
+crunch runner's streaming-protocol gate — but there is no real TS-AUC for this method
+yet. No new experiment-log row exists for it below; add one (with a real TS-AUC and
+wall-clock timing, exactly like every prior row) once it is actually run against the
+competition data.
+
+**A real dependency conflict was found and fixed while wiring this up, before any
+training run — flagged here since it's exactly the kind of environment issue this
+section is meant to track.** `torch` (needed for the LSTM) has version-compatibility
+constraints against this project's `numpy==2.5.2` pin, the same category of problem
+as the `numpy`/`scipy` ABI mismatch described in §3 below. `torch==2.2.1` (what was
+already present in the base conda environment used to author the notebook) and
+`torch==2.3.1` (the next point release checked) BOTH fail at import time against
+`numpy==2.5.2`: `UserWarning: Failed to initialize NumPy: _ARRAY_API not found`,
+followed by `RuntimeError: Numpy is not available` the moment `torch.from_numpy()` or
+`.numpy()` is called — which this notebook's causal channel encoding and every step
+of streaming inference do constantly, so this would have broken the notebook
+completely, not just in some edge case. Verified empirically in a disposable
+throwaway venv (not assumed from version numbers or changelog claims): each candidate
+`torch` version was installed fresh alongside `numpy==2.5.2` and put through a real
+`torch.from_numpy()`/`.numpy()` round-trip plus an `nn.LSTM` +
+`pack_padded_sequence`/`pad_packed_sequence` forward pass — the actual mechanisms
+this notebook relies on. `torch==2.4.1` is the first version in that chain confirmed
+to work cleanly; `requirements.txt` now pins it, with the same finding recorded in
+its comments and in `deep_learning_archi.ipynb`'s closing markdown cell. The disposable
+test venv used for this check was deleted afterward — it was scratch, not part of the
+deliverable.
+
 ## 2. Current implementation, exactly as it stands
 
 Both scorers live inside `infer()` in `baseline_with_viz.ipynb`, selected by a single

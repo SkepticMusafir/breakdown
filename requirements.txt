@@ -1,13 +1,18 @@
 # Environment for the CrunchDAO "structural-break-real-time" submission
-# (see files/EXPERIMENTS.md and files/baseline_with_viz.ipynb).
+# (see files/EXPERIMENTS.md, files/baseline_with_viz.ipynb, and
+# files/deep_learning_archi.ipynb).
 #
 # Setup (Python 3.11+ required -- river's own minimum; 3.12 verified):
 #   python -m venv .venv
 #   .venv\Scripts\activate            (Windows)
 #   source .venv/bin/activate         (macOS/Linux)
-#   pip install -r requirements.txt
+#   pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
 #   python -m ipykernel install --user --name breakdown --display-name "breakdown (structural-break)"
-# Then select the "breakdown" kernel for baseline_with_viz.ipynb in Jupyter/VS Code.
+# Then select the "breakdown" kernel for either notebook in Jupyter/VS Code.
+# The --extra-index-url is only needed to get a CPU-only torch wheel instead
+# of pip defaulting to a much larger CUDA build; if a GPU build is wanted
+# instead, install torch separately per pytorch.org's selector and drop the
+# torch line below from this file before running pip install.
 #
 # Only direct, imported dependencies are pinned (to exact versions, for result
 # reproducibility per EXPERIMENTS.md) -- pip resolves transitive dependencies
@@ -23,3 +28,24 @@ river==0.26.1
 crunch-cli==12.0.1
 matplotlib==3.11.1
 ipykernel==7.3.0
+
+# deep_learning_archi.ipynb (Tier 4, LSTM-based) only:
+#
+# torch==2.4.1, NOT the more "obvious" 2.2.1/2.3.1 -- both were tried first
+# (matching what was already installed elsewhere in this environment / the
+# next few point releases) and BOTH fail at import time against this file's
+# numpy==2.5.2 pin: `UserWarning: Failed to initialize NumPy: _ARRAY_API not
+# found` followed by `RuntimeError: Numpy is not available` the moment
+# torch.from_numpy()/.numpy() is used (which this notebook's channel
+# encoding and streaming inference both do constantly). This is the exact
+# same category of bug as the numpy/scipy ABI mismatch already documented
+# in EXPERIMENTS.md's Scope section 3 (a package built against NumPy 1.x's
+# C-API breaking under NumPy 2.x) -- confirmed empirically in a disposable
+# throwaway venv (installed each candidate version, ran a real
+# torch.from_numpy()/.numpy() round-trip plus an nn.LSTM +
+# pack_padded_sequence/pad_packed_sequence forward pass, not just an import
+# check) before pinning here, precisely to avoid repeating that incident.
+# torch==2.4.1 is the first version confirmed to work cleanly against
+# numpy==2.5.2 in that check; verify again if this pin is ever bumped, using
+# the same round-trip + LSTM check, not just "install and import".
+torch==2.4.1
